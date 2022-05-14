@@ -1,0 +1,200 @@
+迭代器
+迭代是访问集合元素的一种方式。迭代器是一个可以记住遍历的位置的对象。迭代器对象从集合的第一个元素开始访问，直到所有的元素被访问结束。迭代器只能往前不能往后
+
+可迭代对象
+我们已经直到可以对list、tuple、str等类型的数据使用for...in...的循环语法从其中一次拿到数据进行使用。我们把这样的过程称为遍历，也叫迭代
+
+但是，是否所有的数据类型都可以放到for...in...的语句中，然后让for...in...每次从中取出一条数据供我们使用，即供我们迭代？
+
+如何判断是否可迭代
+from collections import Iterable	#从collections中导入一个类
+isinstance([11,22,33],Iterable)	#判断第一个参数是否在这个类中，如果在，那么就是可迭代对象
+
+isinstance：第一个参数需要判断的数据，第二个参数是一个类，判断第一个参数是不是第二个参数的类的对象
+该函数不仅可以判断是否是可迭代对象，还可以看是不是某个类产生的对象，如以下代码
+class Dog(object):
+    pass
+dog = Dog()
+isinstance(dog,Dog)
+Out[6]: True
+isinstance(dog,object)
+Out[7]: True
+
+总而言之，isinstance(a,A)可以判断，a是不是A这个类创建出来的
+
+Iterable是一个可迭代的类
+
+自己创建的类
+class Classmate(object):
+    def __init__(self):
+        self.names = []
+
+    def add(self,name):    
+        self.names.append(name)
+
+    # 如果想要一个对象成为一个可以迭代的对像，即可以使用for...in...，那么必须实现__iter__方法
+    def __iter__(self):
+        pass
+
+# 如果没有__iter__方法，返回的值为False，有的话返回的是True，即使该方法没有代码（也就是pass），返回的也是True
+print('判断classmate是否是可迭代对象',instance(classmate,Iterable))
+
+
+系统是否可以用for..in..方法（下面的代码即成功创建了一个可以for...in...的类）：
+1、判断是否有__iter__方法来判断的那个是否是可迭代对象
+2、在判断该类里面是否有__iter__方法中返回一个对象的引用，并且这个对象的里面要有__iter__和__next__方法
+
+
+for temp in xxx_obj:
+	pass
+	
+该循环的实现步骤（以下面代码为例）
+1、判断xxx_obj是否可以迭代（即是否有__iter__方法）
+2、在第一步成立的前提下，调用iter函数。得到xxx_obj对象的__iter__方法的返回值（即系统自动调用iter函数，即以下代码的iter(classmate)，得到__iter__方法的return值）
+3、__iter__方法的返回值是一个迭代器
+4、返回了return对象后，for循环开始调用return返回的对象中的__next__方法，调一次取一个
+
+
+class Classmate(object):
+    def __init__(self):
+        self.names = list()
+
+    def add(self,name):
+        self.names.append(name)
+
+    def __iter__(self):
+        return Classmate_Iterable()	# 注意：因为使用了类名+括号，即创建了一个实例对象
+
+
+class Classmate_Iterable(object):
+    def __iter__(self):
+        pass
+
+    def __next__(self):
+        pass
+
+classmate = Classmate()
+classmate.add(1)
+classmate.add(2)
+classmate.add(3)
+print(iter(classmate))
+
+next()函数会主动调用指定对象的__next__方法
+
+Iterator与上述的Iterable大致相同，前者表示迭代器，后者表示的是一个可迭代对象
+
+当你去取一个迭代器，当它取完的时候，如何告诉它你已经去晚了？
+此时要抛出一个异常：raise StopIteration,那么for循环就自动停了，见以下代码
+
+要实现一个可迭代的类两种方法：
+方法一：
+class Classmate(object):
+    def __init__(self):
+        self.names = list()
+
+    def add(self,name):
+        self.names.append(name)
+
+    def __iter__(self):
+        return Classmate_Iterable(self)
+
+
+class Classmate_Iterable(object):
+    def __init__(self,obj):
+        self.obj = obj
+        self.num = 0
+
+    def __iter__(self):
+        pass
+
+    def __next__(self):
+        if self.num < len(self.obj.names):
+            result = self.obj.names[self.num]
+            self.num += 1
+            return result
+        raise StopIteration
+
+classmate = Classmate()
+classmate.add(1)
+classmate.add(2)
+classmate.add(3)
+
+for i in classmate:
+    print(i)
+
+
+方法二：
+class Classmate(object):
+    def __init__(self):
+        self.names = list()
+        self.num = 0
+
+    def add(self,name):
+        self.names.append(name)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.num < len(self.names):
+            result = self.names[self.num]
+            self.num += 1
+            return result
+        raise StopIteration
+
+classmate = Classmate()
+classmate.add(1)
+classmate.add(2)
+classmate.add(3)
+
+for i in classmate:
+    print(i)
+
+
+
+一个对象是迭代器，那么它一定可以迭代
+反之，一个对象可以迭代，它不一定是迭代器
+
+
+range(x)--->生成一个0到x-1的列表
+xrange(x)--->生成一个对象，该对象不生成x个值，里面存储了生成这x个值方式（占用了极小的空间）
+百度：range和xrange的区别（python2）
+
+注意：为了解决python2中range出现的问题，python3中的range相当于python2中的xrange
+
+迭代器的优点：占用极小的空间来去实现，减少了出现大量资源的可能性
+
+
+非迭代的话，即用列表，那么要生成大量的值，占用大量的空间
+迭代的话，通过迭代器，什么时候调用我，我就生成什么值，减少空间的占用
+
+
+
+-----迭代器的其他使用方式
+除了for循环能接收可迭代对象，list，tuple等也能接收
+以list为例
+a = (11,22,33)
+list(a)
+
+实现list(a)步骤
+第一步：创建一个空列表
+第二部：系统调用list里面的迭代器（因为a是一个可迭代对象，通过__iter__方法得到该对象），找到迭代器之后，通过__next__方法得到里面的值 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

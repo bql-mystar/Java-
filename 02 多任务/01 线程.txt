@@ -1,0 +1,288 @@
+并行：真的多任务（cpu数目大于等于任务数）
+并发：假的多任务（任务数大于cpu数目）
+
+python的thread模块是比较底层的模块，python的threading模块是对thread做了一些包装的，可以更加方便的被使用
+
+单线程执行
+import time
+
+def saySorry():
+	print('亲爱的，我错了，我能吃饭了吗？')
+	time.sleep(1)
+
+if __name__ == '__main__':
+	for i in range(5):
+		saySorry()
+
+
+多线程执行
+import threading
+import time
+
+def saySorry():
+	print('亲爱的，我错了，我能吃饭了吗？')
+	time.sleep(1)
+
+if __name__ == '__main__':
+	for i in range(5):
+		# 创建实例对象
+		t = threading.Thread(target=saySorry)
+		t.start()	#启动线程，即让线程开始执行
+
+
+
+
+注意：在使用函数时，如果用法是(区分函数名后面有无括号)：函数名()--->调用函数
+			      函数名---->相当于告诉我函数在哪
+
+
+查看线程数量
+import threading
+from time import sleep,ctime
+
+def sing():
+	for i in range(3):
+		print('正在唱歌....%d' % i)
+		sleep(1)
+
+def dance():
+	for i in range(3):
+		print('正在跳舞...%d' % i)
+		sleep(1)
+
+if __name__ == '__main__':
+	print('---开始---:%s' % ctime)
+	t1 = threading.Thread(target=sing)
+	t2 = threading.Thread(target=dance)
+	t1.start()
+	t2.start()
+	while True:
+		length = len(threading.enumerate())
+		print('当前运行的线程数为：%d' % length)
+		if length<=1:
+			break
+		sleep(0.5)
+
+
+线程的运行是没有先后顺序的（即线程的执行顺序不确定）
+
+如果创建的Thread时执行的函数运行结束，那么意味着这个子线程结束了
+
+主线程会在所以的子线程结束后才结束
+如果主线程在子线程结束之前就结束了，那么所有的子线程也会结束
+
+
+
+当调用Thread的时候（创建一个实例对象），不会创建线程
+当调用Thread创建出来的实例对象的start方法的时候，才会创建线程以及让这个线程开始运行
+
+import threading
+import time
+
+class MyThread(threading.Thread):
+	def run(self):
+		for i in range(3):
+			time.sleep(1)
+			msg = "I'm" + self.name + '@' + str(i)	#name属性保存的是当前线程的名字
+			print(msg)
+
+if __name__ == '__main__':
+	t = MyThread()
+	t.start()
+
+注意：threading.Thread()类中有一个run方法
+通过重写这个run方法，这个run方法就是线程执行的代码
+如果要调用一个类的不同方法，就要在run方法中调用该类的方法（例子如下）
+
+适用范围：通过继承threading.Thread创建多线程适合于一个要做的事情比较复杂，而且分成了多个函数来做
+import threading
+import time
+
+class MyThread(threading.Thread):
+    def run(self):
+        for i in range(3):
+            time.sleep(1)
+            msg = "i'm" + self.name + '@' + str(i)      # name属性中保存的是当前线程的名字
+            print(msg)
+            self.hello()
+
+    def hello(self):
+        for i in range(5):
+            time.sleep(1)
+        print('hello world')
+
+if __name__ == '__main__':
+    t = MyThread()
+    t.start()
+
+
+
+
+
+多线程---共享全局变量
+
+在一个函数中，对全局变量进行修改的时候，到底是否需要使用global进行说明，要看是否对全局变量的执行指向进行了修改
+如果修改了指向，即让全局变量指向了一个新的地方，那么必须使用global，如果仅仅修改了指向的空间中的数据，此时不用必须使用global
+
+
+t1 = threading.Thread(target=text1,args=(num,))
+注意：以上调用的target指定的是将来这个线程要去哪个函数执行代码，
+	          args指定的是将来调用函数的时候，传递什么参数过去（调用的函数需要指定参数时才能使用，并且传入的参数一定要是个元组，否则无法运行）
+
+
+共享全局变量的原因：多线程往往配合使用
+
+共享全局变量可能遇到的问题：可能出现资源竞争（不论是什么语言C/C++,JAVA等都会有此类问题）
+以两个线程为例，倘若两个线程分别是一读一写，那么可能不会出现资源竞争
+但，如果两个都是写的话，并且次数庞大，那么就容易出现资源竞争问题
+
+解决资源竞争的问题：原子性--->即要么这件事情不做，要么就做完
+
+同步的概念：
+同步就是协同步调，按预定的先后次序进行运行。如，你说完，我再说
+'同'字可以从字面上容易理解为一起动作
+其实不是，''同
+字应该是协同、协助、互相配合
+如进程、线程同步，可以理解为进程或线程A和B一块配合，A执行到一定程度时要依靠B的某个结果，于是停下来，示意B运行；B执行，再将结果给A；A再继续操作
+
+解决线程同时修改全局变量的方式
+对于上一小节提出的那个计算错误的问题，可以通过线程同步来进行 解决
+思路如下：
+	1、系统调用t1，然后然后获取到g_num的值为0，此时上一把锁，即不允许其他线程操作g_num
+	2、t1对g_num的值进行+1
+	3、t1解锁，此时g_num的值为1，其他的线程就可以使用g_num了，而且g_num的值不是0而是1
+	4、同理，其他线程在对g_num进行修改时，都要先上锁，处理完后再解锁，在上锁的整个过程中不允许其他线程访问，就保证了数据的正确性
+
+
+互斥锁
+当一个线程几乎同时修改某一个共享数据的时候，需要进行同步控制
+
+线程同步能够保证多个线程安全访问竞争资源，最简单的同步机制是引入互斥锁
+
+互斥锁为资源引入一个状态：锁定/非锁定
+
+某个线程要更改共享数据时，先将其锁定，此时资源的状态为"锁定"，其他线程不能更改；知道该线程释放资源，将资源的状态编程"非锁定"，
+其他的线程才能再次锁定该资源。互斥锁保证了每次只有一个线程进入写入操作，从而保证了多线程情况下数据的正确性
+
+threading模块中定义了Lock类，可以方便的处理锁定
+
+
+# 创建锁(默认是没有上锁的状态)
+mutex = threading.Lock()
+
+#锁定
+mutex.acqiuire()
+
+#释放
+mutex.release()
+
+注意：
+1、如果这个锁之前是没有上锁的，那么acquire不会堵塞
+2、如果在调用acquire对这个锁上锁之前，它已经被其他线程上了锁，那么此时的acquire会堵塞，直到这个锁被解锁为止
+
+上锁原则：上锁的代码越少越好
+
+方法一：
+import threading
+import time
+
+num = 0
+# 创建互斥锁
+metux = threading.Lock()
+
+def work1():
+    global num
+    # 上锁，如果之前没有上锁，那么此时，上锁成功
+    # 如果上锁之前已经被上锁了，那么此时会堵塞在这里，直到这个锁被解开的位置
+    metux.acquire()
+    for i in range(1000000):
+        num += 1
+    # 解锁
+    metux.release()
+    print('---work1---:',num)
+
+
+def work2():
+    global num
+    metux.acquire()
+    for i in range(2000000):
+        num += 1
+    metux.release()
+    print('---work2---:',num)
+
+def main():
+    print('---start---:',num)
+    t1 = threading.Thread(target=work1)
+    t2 = threading.Thread(target=work2)
+    t1.start()
+    t2.start()
+    time.sleep(3)
+    print('---main---:',num)
+
+if __name__ == '__main__':
+    main()
+
+
+
+方法二：
+import threading
+import time
+
+num = 0
+# 创建互斥锁
+metux = threading.Lock()
+
+def work1():
+    global num
+
+    for i in range(1000000):
+        # 上锁，如果之前没有上锁，那么此时，上锁成功
+        # 如果上锁之前已经被上锁了，那么此时会堵塞在这里，直到这个锁被解开的位置
+        metux.acquire()
+        num += 1
+        # 解锁
+        metux.release()
+    print('---work1---:',num)
+
+
+def work2():
+    global num
+   
+    for i in range(2000000):
+         metux.acquire()
+         num += 1
+        metux.release()
+    print('---work2---:',num)
+
+def main():
+    print('---start---:',num)
+    t1 = threading.Thread(target=work1)
+    t2 = threading.Thread(target=work2)
+    t1.start()
+    t2.start()
+    time.sleep(3)
+    print('---main---:',num)
+
+if __name__ == '__main__':
+    main()
+
+
+方法一将for循环上锁，因此，必须先将一个线程的循环执行完才能执行另一个线程
+方法二将for循环内部上锁，只是将加法部分上锁，只要加完一次，可能就可以执行另一个线程
+两种方法中间结果不同，但最终结果都是相同的
+
+死锁：
+在线程间共享多个资源的时候，如果两个线程分别占有一部分资源并且同时等待对方的资源，就会造成死锁
+尽管死锁很少发生，但一旦发生就会造成应用的停止响应
+
+
+避免死锁
+1、程序设计时要尽量避免（银行家算法）
+2、添加超时时间等
+
+
+
+
+
+
+

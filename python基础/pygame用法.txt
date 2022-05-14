@@ -1,0 +1,241 @@
+要使用pygame提供的所有功能之前，需要调用init方法
+在游戏结束前需要调用quit方法
+
+坐标系
+原点在左上角（0，0）
+x轴水平方向向右，逐渐增加
+y轴垂直方向向下，逐渐增加
+
+在游戏中，所有可见元素都是以矩形区域来描述位置的
+	要描述一个矩形区域的四个要素：（x.y）（width，height）
+pygame专门提供一个类，  pygame.Rect用于描述矩形区域
+Rect(x,y,width,height) ->Rect
+
+pygame专门提供了一个模块pygame.display用于创建、管理游戏窗口
+pygame.display.set_model()	初始化游戏显示窗口
+pygame.display.updata()	刷新屏幕内容显示
+
+set_mode(resolution=(0,0),flags=0,depth=0) ->Surface
+作用--创建游戏显示窗口
+resolution指定屏幕的宽和高，默认创建的窗口大小和屏幕大小一致
+flags参数指定屏幕的附加选项，例如是否全屏等等，默认不需要传递
+depth参数表示颜色的位数，默认自动匹配
+
+简单的游戏循环
+为了做到游戏程序启动后，不会立即退出，通常会在游戏程序中增加一个游戏循环
+所谓的游戏循环就是一个无限循环
+	注意：游戏窗口不需要重复创建
+
+图形绘制
+1、使用pygame.image.load()加载图形的数据
+2、使用游戏屏幕为对象，调用blit方法，将图形绘制到指定位置
+3、调用pygame.display.update()方法更新整个屏幕的显示
+
+load（file_path）
+blit(图像，位置)
+
+透明图像
+png格式的图像是支持透明的
+在绘制图像时，透明区域不会显示任何内容
+但是如果下方已经有内容，会透过透明区域显示出来
+
+一般在电脑上，每秒绘制60次，就能够达到非常连续高品质的动画效果
+	每次绘制的结果被称为帧Frame
+
+
+游戏的俩个组成部分
+1、游戏初始化	2、游戏循环
+
+游戏初始化包括1、设置游戏窗口  2、绘制图形初始位置  3、设置游戏时钟
+游戏循环包括1、设置刷新帧率  2、检测用户交互  3、更新所有图像位置  4、更新屏幕显示
+
+游戏时钟
+pygame专门提供了一个类 pygame.time.Clock可以非常方便的设置屏幕绘制速度----刷新帧率
+要使用时钟对象需要两步：
+	1）在游戏初始化创建一个时钟对象
+	2）在游戏循环中让时钟调用tick(帧率)方法
+tick方法会根据上次被调用的时间，自动设置游戏循环中的延时
+
+每一次调用update（）方法之前，需要把所有的游戏图像都重新绘制一
+而且应该最先重新绘制背景图像
+
+在游戏循环中监听事件
+事件event
+	就是游戏启动后，用户针对游戏所做的操作
+
+监听
+	在游戏循环中，判断用户具体的操作
+	只有捕获到用户的具体的操作，才能针对性的做出响应
+
+代码实现
+pygame通过pygame.event.get()可以获得用户当前所作动作的事件列表
+	用户可以同一时间做很多事情
+event事件返回的是一个列表
+
+提示：这段代码非常的固定，几乎所有的pygame游戏都大同小异
+#判断用户是否点击了关闭按钮
+for event in pygame.event.get():
+	if event.type == pygame.QUIT:
+		print（‘退出游戏’）
+		pygame.quit()
+		#直接退出系统
+		exit（）
+
+exit()直接终止当前正在执行的程序
+
+精灵和精灵组
+为了简化开发步骤，pygame提供了两个类
+pygame.sprite.Sprite  --存储图像数据image和位置rect的对象
+pygame.sprite.Group
+
+派生精灵子类
+1、新建plane_sprites.py文件
+2、定义GameSprite继承自pygame.sprite.Sprite
+
+注意
+如果一个类的父类不是object
+在重写初始化方法时，异地那个要先super（）一下父类的__init__方法
+保证父类中实现的__init__代码能够被正常执行
+
+
+属性
+image  精灵图像，使用image_name加载
+rect  精灵大小，默认使用图像大小
+speed  精灵移动速度，默认为1
+
+方法
+update  每次更新屏幕时在游戏循环内调用
+	让精灵的self.rect.y += self.speed
+
+提示
+image的get_rect()方法，可以返回pygame.Rect(0,0,图像宽度,图像高)的对象
+
+
+在pygame中可以使用pygame.time.set_timer()来添加定时器
+所谓定时器，就是每隔一段时间去执行一些动作
+
+set_timer(eventid,milliseconds) -> None
+set_timer可以创建一个事件
+可以在游戏循环和事件监听方法中捕获到该事件
+第一个参数 事件代号 需要基于常量pygame.USEREVENT 来指定
+	USEREVENT 是一个整数，再增加的事件可以使用 USEREVENT+1 指定，以此类推。。。
+第二个参数是 事件触发 间隔的毫秒值
+
+定时器事件的监听
+通过pygame.event.get()可以获取当前时刻所有的事件列表
+遍历列表并且判断event.type是否等于eventid，如果相等，表示定时器事件发生
+
+
+定义并监听创建敌机的定时器事件
+pygame的定时器使用套路非常固定
+1、定义 定时器常量 ---eventid
+2、在初始化方法中，调用set_timer方法 设置定时器事件
+3、在游戏循环中，监听定时器事件
+
+在导入模块时，建议按照以下顺序导入
+1、官方标准模块导入
+2、第三方模块导入
+3、应用程序模块导入
+
+使用pygame.Rect提供的bottom属性，在指定敌机初始位置时，会比较方便
+bottom = y+height
+y = bottom - height
+
+
+
+在精灵组中有add方法向精灵组中添加精灵
+	 有kill方法将精灵从所有组中删除
+
+
+在pygame中针对键盘按键的捕获，有两种方式
+第一种方式：判断event.type == pygame.KEYDOWN
+第二张方式：
+	1、首先使用pygame.key.get_pressed()返回所有按键元组
+	2、通过按键常量，判断元组中某一个键是否按下--如果按下，对应的数值为1
+
+第一种方式：
+	if event.tyoe == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
+		print('向右移动...')
+
+第二种方式：
+	#返回所有按键的元组，如果某个键按下，对应的值会是1
+	keys_pressed = pygame.key.get_pressed()
+	#判断是否按下方向键
+	if keys_pressed[pygame.K_RIGHT]:
+		print('向右移动')
+
+两种方式的不同：
+第一种方式，按下抬起算一次，输出一次向右移动（event.type用户必须要抬起按键才算一次按键事件，操作灵活性会大打折扣）
+第二张方式，按下开始算，一直按住，一直输出向右移动，第一种方式不会（用户可以按住方向键不放，就能够实现持续向某一个方向移动了，操作灵活性更好）
+
+
+
+pygame提供了两个非常方便的方法可以实现碰撞检测：
+pygame.sprite.groupcollide()
+两个精灵组中所有的精灵碰撞检测
+groupcollide(group1,group2,dokill1,dokill2,colluded = None) ->Sprite_dict
+如果将dokill设置为True，则发生碰撞的精灵自动移除
+collided参数是用于计算碰撞的回调函数
+	如果没有指定，则每个精灵必须有一个rect属性
+
+pygame.sprite.spritecollide()
+判断某个精灵和指定精灵组中的精灵的碰撞
+spritecollide(sprite,group,dokill,collided=None) -> Sprite_list
+如果将dokill设置为True，则指定精灵组中发生碰撞的精灵自动移除
+collided参数是用于计算碰撞的回调函数
+	如果没有指定，则每个精灵必须有一个rect属性
+返回精灵组中跟精灵发生碰撞的精灵列表
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
